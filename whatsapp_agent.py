@@ -1,5 +1,8 @@
 print("SISTEMA INICIANDO... Verificando config...")
 import os
+import sys
+print(f"Caminho atual (CWD): {os.getcwd()}")
+print(f"Caminhos de busca do Python (sys.path): {sys.path}")
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import requests
@@ -79,7 +82,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         body = await request.json()
         print(f"WEBHOOK RECEIVED: {body}") # LOG DE DEBUG
     except Exception as e:
-    except Exception as e:
         print(f"Erro ao processar JSON do webhook: {e}")
         return {"status": "error", "message": "Invalid JSON"}
 
@@ -115,7 +117,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                         break
 
         remote_jid = data.get("remoteJid")
-voce
+
         if not remote_jid or not message_text:
             print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
             return {"status": "ignored", "message": "Missing remoteJid or text"}
