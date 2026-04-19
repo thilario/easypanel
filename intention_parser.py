@@ -54,9 +54,14 @@ class IntentionParser:
 
         try:
             response = self.model.generate_content(prompt)
+            print(f"GEMINI RAW RESPONSE: {response.text}") # LOG DE DEBUG
             # Remove possíveis marcações de markdown do JSON (ex: ```json ... ```)
             clean_text = response.text.replace('```json', '').replace('```', '').strip()
-            return json.loads(clean_text)
+            parsed_json = json.loads(clean_text)
+            print(f"GEMINI PARSED JSON: {parsed_json}") # LOG DE DEBUG
+            return parsed_json
         except Exception as e:
             print(f"Erro ao processar intenção com Gemini: {e}")
+            import traceback
+            traceback.print_exc()
             return None
