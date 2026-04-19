@@ -116,7 +116,7 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                         message_text = value
                         break
 
-        remote_jid = data.get("remoteJid")
+        remote_jid = data.get("key", {}).get("remoteJid")
 
         if not remote_jid or not message_text:
             print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
