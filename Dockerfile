@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Comando para iniciar o servidor
-CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "3000"]
