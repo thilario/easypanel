@@ -12,8 +12,8 @@ app = FastAPI()
 
 # Configurações Evolution API
 EVOLUTION_URL = "https://evolutionapi-evolution-api.eaxyla.easypanel.host"
-EVOLUTION_API_KEY = "6F853DC40B80-4B5C-846A-3A2CF033A6E7"
-INSTANCE_NAME = "Thiago"
+EVOLUTION_API_KEY = "8DE0548DAD46-45B4-8CFC-13D2359243E4"
+INSTANCE_NAME = "Bravum"
 
 # Cliente UTMify
 utmify = UTMifyClient()
