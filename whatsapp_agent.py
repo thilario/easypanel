@@ -120,11 +120,10 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
             return {"status": "ignored", "message": "Missing remoteJid or text"}
 
-        # Lógica de Menção: Responde se for chat privado ou se houver @ no texto do grupo
-        is_group = remote_jid.endswith("@g.us")
-        if not is_group or (is_group and "@" in message_text):
-            print(f"SISTEMA: Processando requisição de {remote_jid}: {message_text}")
-            background_tasks.add_task(process_request, message_text, remote_jid)
+        # Lógica de Menção: DESATIVADA para testes
+        # Respondemos a qualquer mensagem para validar o fluxo
+        print(f"SISTEMA: Processando requisição de {remote_jid}: {message_text}")
+        background_tasks.add_task(process_request, message_text, remote_jid)
 
     return {"status": "received"}
 
