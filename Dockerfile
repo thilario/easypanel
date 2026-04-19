@@ -10,11 +10,14 @@ COPY requirements.txt .
 # Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia todo o resto do código para o container
+# Copia todo o conteúdo do diretório local para /app no container
 COPY . .
 
+# Garante que o Python encontre os módulos na pasta /app
+ENV PYTHONPATH=/app
+
 # Expõe a porta que o FastAPI usa
-EXPOSE 3000
+EXPOSE 8000
 
 # Comando para iniciar o servidor
-CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "8000"]
