@@ -65,6 +65,11 @@ def process_request(text: str, remote_jid: str):
 
     send_whatsapp_message(remote_jid, response_text)
 
+@app.get("/test")
+async def test():
+    """Rota simples para verificar se o servidor está online."""
+    return {"status": "Alive!", "message": "O servidor do agente está funcionando perfeitamente."}
+
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
     """Recebe eventos da Evolution API com tratamento robusto de erros."""
