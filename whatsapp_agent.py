@@ -8,6 +8,9 @@ from pydantic import BaseModel
 import requests
 from utmify_client import UTMifyClient
 from dotenv import load_dotenv
+from intention_parser import IntentionParser
+
+load_dotenv()
 
 load_dotenv()
 
@@ -20,6 +23,8 @@ INSTANCE_NAME = "robo"
 
 # Cliente UTMify
 utmify = UTMifyClient()
+# Analisador de Intenções (Gemini)
+parser = IntentionParser()
 
 class EvolutionWebhook(BaseModel):
     event: str
@@ -44,29 +49,44 @@ def send_whatsapp_message(remote_jid: str, text: str):
         print(f"Erro ao enviar mensagem: {e}")
 
 def process_request(text: str, remote_jid: str):
-    """Lógica simplificada de interpretação e resposta."""
-    text_lower = text.lower()
+    """Lógica inteligente de interpretação e resposta usando Gemini."""
+    # 1. Usa o Gemini para entender o que o usuário quer
+    intention = parser.parse(text)
 
-    platform = None
-    if "google" in text_lower:
-        platform = "google"
-    elif "meta" in text_lower or "facebook" in text_lower:
-        platform = "meta"
+    if not intention:
+        response_text = "Desculpe, não consegui entender seu pedido. Tente algo como 'Gasto do Google ontem' ou 'Relatório Meta deste mês'."
+        send_whatsapp_message(remote_jid, response_text)
+        return
+
+    platform = intention.get("platform")
+    start_date = intention.get("start_date")
+    end_date = intention.get("end_date")
 
     if not platform:
-        response_text = "Por favor, especifique se deseja dados do *Google* ou *Meta*."
-    else:
-        # Busca dados de ontem por padrão
-        results = utmify.fetch_metrics(platform)
-        summary = utmify.calculate_summary(results)
+        response_text = "Você não especificou a plataforma. Deseja dados do *Google* ou *Meta*?"
+        send_whatsapp_message(remote_jid, response_text)
+        return
 
-        response_text = (
-            f"📊 *Relatório {platform.upper()} (Ontem)*\n\n"
-            f"💰 *Gasto:* R$ {summary['spend']:.2f}\n"
-            f"✅ *Vendas:* {summary['sales']}\n"
-            f"📈 *ROAS:* {summary['roas']:.2f}\n"
-            f"🎯 *CAC:* R$ {summary['cac']:.2f}"
-        )
+    # 2. Converte as datas do Gemini para o formato que a API da UTMify aceita
+    # O Gemini retorna YYYY-MM-DD, precisamos de ISO UTC (ex: YYYY-MM-DDT03:00:00.000Z)
+    date_range = {
+        "from": f"{start_date}T03:00:00.000Z",
+        "to": f"{end_date}T02:59:59.999Z"
+    }
+
+    # 3. Busca os dados
+    results = utmify.fetch_metrics(platform, date_range=date_range)
+    summary = utmify.calculate_summary(results)
+
+    # 4. Monta a resposta
+    period_desc = f"de {start_date} até {end_date}"
+    response_text = (
+        f"📊 *Relatório {platform.upper()}* ({period_desc})\n\n"
+        f"💰 *Gasto:* R$ {summary['spend']:.2f}\n"
+        f"✅ *Vendas:* {summary['sales']}\n"
+        f"📈 *ROAS:* {summary['roas']:.2f}\n"
+        f"🎯 *CAC:* R$ {summary['cac']:.2f}"
+    )
 
     send_whatsapp_message(remote_jid, response_text)
 
