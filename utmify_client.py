@@ -49,9 +49,19 @@ class UTMifyClient:
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days_back)
 
-        # Ajuste aproximado para o formato usado no painel (03:00:00.000Z)
+        # Ajuste aproximado no formato usado no painel (03:00:00.000Z)
         from_str = start_date.strftime("%Y-%m-%dT03:00:00.000Z")
         to_str = (start_date + timedelta(days=1)).strftime("%Y-%m-%dT02:59:59.999Z")
+
+        return {"from": from_str, "to": to_str}
+
+    def get_month_range(self):
+        """Retorna o intervalo do primeiro dia do mês atual até agora."""
+        now = datetime.now()
+        start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        from_str = start_of_month.strftime("%Y-%m-%dT03:00:00.000Z")
+        to_str = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         return {"from": from_str, "to": to_str}
 
