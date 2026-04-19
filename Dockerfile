@@ -16,8 +16,8 @@ COPY . .
 # Garante que o Python encontre os módulos na pasta /app
 ENV PYTHONPATH=/app
 
-# Expõe a porta que o FastAPI usa
-EXPOSE 8000
+# Expõe a porta 80
+EXPOSE 80
 
-# Comando para iniciar o servidor
-CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando para iniciar o servidor na porta 80
+CMD ["uvicorn", "whatsapp_agent:app", "--host", "0.0.0.0", "--port", "80"]
