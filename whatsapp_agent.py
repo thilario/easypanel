@@ -1,3 +1,4 @@
+print("SISTEMA INICIANDO... Verificando config...")
 import os
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
@@ -91,22 +92,35 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if not message:
             return {"status": "ignored", "message": "No message found in data"}
 
-        # Tenta extrair o texto de diferentes campos comuns da Evolution API
+        # Tenta extrair o texto de todas as formas possíveis (Evolution API v1 e v2)
         message_text = ""
         if isinstance(message, dict):
-            message_text = message.get("conversation") or \
-                           message.get("extendedTextMessage", {}).get("text", "") or \
-                           message.get("text", "")
+            # Tenta conversation (mensagens simples)
+            if "conversation" in message:
+                message_text = message["conversation"]
+            # Tenta extendedTextMessage (mensagens com link, formatação ou menção)
+            elif "extendedTextMessage" in message:
+                message_text = message["extendedTextMessage"].get("text", "")
+            # Tenta apenas o campo text
+            elif "text" in message:
+                message_text = message["text"]
+            # Fallback: tenta procurar qualquer chave que contenha texto
+            else:
+                for key, value in message.items():
+                    if key in ["text", "content", "body"] and isinstance(value, str):
+                        message_text = value
+                        break
 
         remote_jid = data.get("remoteJid")
 
         if not remote_jid or not message_text:
+            print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
             return {"status": "ignored", "message": "Missing remoteJid or text"}
 
         # Lógica de Menção: Responde se for chat privado ou se houver @ no texto do grupo
         is_group = remote_jid.endswith("@g.us")
         if not is_group or (is_group and "@" in message_text):
-            print(f"Processando mensagem de {remote_jid}: {message_text}")
+            print(f"SISTEMA: Processando requisição de {remote_jid}: {message_text}")
             background_tasks.add_task(process_request, message_text, remote_jid)
 
     return {"status": "received"}
