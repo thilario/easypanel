@@ -13,7 +13,9 @@ class IntentionParser:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
 
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Usamos 'gemini-1.5-flash' ou 'gemini-pro' como alternativa caso o primeiro falhe
+        self.model_name = 'gemini-1.5-flash'
+        self.model = genai.GenerativeModel(self.model_name)
 
     def parse(self, text: str):
         """
