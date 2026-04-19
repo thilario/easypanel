@@ -23,14 +23,12 @@ class EvolutionWebhook(BaseModel):
     data: dict
 
 def send_whatsapp_message(remote_jid: str, text: str):
-    """Envia mensagem via Evolution API."""
-    # Endpoint atualizado: a instância agora vai no payload, não na URL
-    url = f"{EVOLUTION_URL}/message/sendText"
+    """Envia mensagem via Evolution API v2."""
+    url = f"{EVOLUTION_URL}/message/sendText/{INSTANCE_NAME}"
     payload = {
-        "instance": INSTANCE_NAME,
         "number": remote_jid,
-        "options": {"delay": 1200, "presence": "composing"},
-        "textMessage": {"text": text}
+        "text": text,
+        "options": {"delay": 1200, "presence": "composing"}
     }
     headers = {
         "apikey": EVOLUTION_API_KEY,
@@ -79,6 +77,8 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
     """Recebe eventos da Evolution API com tratamento robusto de erros."""
     try:
         body = await request.json()
+        print(f"WEBHOOK RECEIVED: {body}") # LOG DE DEBUG
+    except Exception as e:
     except Exception as e:
         print(f"Erro ao processar JSON do webhook: {e}")
         return {"status": "error", "message": "Invalid JSON"}
