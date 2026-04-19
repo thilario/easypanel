@@ -24,8 +24,10 @@ class EvolutionWebhook(BaseModel):
 
 def send_whatsapp_message(remote_jid: str, text: str):
     """Envia mensagem via Evolution API."""
-    url = f"{EVOLUTION_URL}/message/sendText/{INSTANCE_NAME}"
+    # Endpoint atualizado: a instância agora vai no payload, não na URL
+    url = f"{EVOLUTION_URL}/message/sendText"
     payload = {
+        "instance": INSTANCE_NAME,
         "number": remote_jid,
         "options": {"delay": 1200, "presence": "composing"},
         "textMessage": {"text": text}
@@ -35,7 +37,8 @@ def send_whatsapp_message(remote_jid: str, text: str):
         "Content-Type": "application/json"
     }
     try:
-        requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
     except Exception as e:
         print(f"Erro ao enviar mensagem: {e}")
 
