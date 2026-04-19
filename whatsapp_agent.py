@@ -67,22 +67,41 @@ def process_request(text: str, remote_jid: str):
 
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
-    """Recebe eventos da Evolution API."""
-    body = await request.json()
+    """Recebe eventos da Evolution API com tratamento robusto de erros."""
+    try:
+        body = await request.json()
+    except Exception as e:
+        print(f"Erro ao processar JSON do webhook: {e}")
+        return {"status": "error", "message": "Invalid JSON"}
 
-    # Verificamos se é um evento de mensagem recebida
-    if body.get("event") == "messages.upsert":
-        data = body.get("data", {})
-        message_text = data.get("message", {}).get("conversation", "") or \
-                        data.get("message", {}).get("extendedTextMessage", {}).get("text", "")
+    # A Evolution API pode enviar o evento na raiz ou dentro de um objeto
+    event = body.get("event") if isinstance(body, dict) else None
+
+    if event == "messages.upsert":
+        data = body.get("data", {}) if isinstance(body, dict) else {}
+        if not data:
+            return {"status": "ignored", "message": "No data found in payload"}
+
+        message = data.get("message", {})
+        if not message:
+            return {"status": "ignored", "message": "No message found in data"}
+
+        # Tenta extrair o texto de diferentes campos comuns da Evolution API
+        message_text = ""
+        if isinstance(message, dict):
+            message_text = message.get("conversation") or \
+                           message.get("extendedTextMessage", {}).get("text", "") or \
+                           message.get("text", "")
 
         remote_jid = data.get("remoteJid")
 
-        # Lógica de Menção: Responde apenas se for mencionado ou se for chat privado
-        # No grupo, a menção vem no campo 'mentionedJid' ou no texto da mensagem
-        is_group = remote_jid.endswith("@g.us")
+        if not remote_jid or not message_text:
+            return {"status": "ignored", "message": "Missing remoteJid or text"}
 
+        # Lógica de Menção: Responde se for chat privado ou se houver @ no texto do grupo
+        is_group = remote_jid.endswith("@g.us")
         if not is_group or (is_group and "@" in message_text):
+            print(f"Processando mensagem de {remote_jid}: {message_text}")
             background_tasks.add_task(process_request, message_text, remote_jid)
 
     return {"status": "received"}
