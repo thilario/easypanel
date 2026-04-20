@@ -147,14 +147,18 @@ def process_request(text: str, remote_jid: str):
     }
 
     # 4. Busca os dados
+    print(f"SISTEMA: Chamando API UTMify para {platform} | Período: {date_range}")
     results = utmify.fetch_metrics(platform, date_range=date_range)
 
-    # LOG DE INVESTIGAÇÃO: Imprime cada item retornado pela API para detectar duplicatas
-    print(f"SISTEMA: Recebido {len(results)} itens da UTMify para {platform}")
-    for i, item in enumerate(results):
-        print(f"Item {i}: Nome: {item.get('name', 'N/A')} | Gasto: {item.get('spend', 0)} | Vendas: {item.get('approvedOrdersCount', 0)}")
+    print(f"SISTEMA: API UTMify retornou {len(results)} itens")
+    if len(results) > 0:
+        for i, item in enumerate(results):
+            print(f"ITEM {i} -> Nome: {item.get('name')} | Gasto: {item.get('spend')} | Vendas: {item.get('approvedOrdersCount')}")
+    else:
+        print("SISTEMA: A API da UTMify retornou uma lista VAZIA. Verifique se há dados para este período.")
 
     summary = utmify.calculate_summary(results)
+    print(f"SISTEMA: Sumário Calculado: {summary}")
 
     # 5. GERA RESPOSTA DINÂMICA COM IA
     response_text = synthesize_response(text, platform, period_name, summary)
