@@ -68,11 +68,13 @@ def process_request(text: str, remote_jid: str):
         return
 
     # 2. Converte as datas do Gemini para o formato que a API da UTMify aceita
-    # O Gemini retorna YYYY-MM-DD, precisamos de ISO UTC (ex: YYYY-MM-DDT03:00:00.000Z)
+    # O Gemini retorna YYYY-MM-DD, precisamos de ISO UTC.
+    # Ajustamos para garantir que pegamos o dia inteiro (de 00:00:00 até 23:59:59)
     date_range = {
-        "from": f"{start_date}T03:00:00.000Z",
-        "to": f"{end_date}T02:59:59.999Z"
+        "from": f"{start_date}T00:00:00.000Z",
+        "to": f"{end_date}T23:59:59.999Z"
     }
+    print(f"SISTEMA: Buscando métricas para {platform} no período: {date_range}")
 
     # 3. Busca os dados
     results = utmify.fetch_metrics(platform, date_range=date_range)
