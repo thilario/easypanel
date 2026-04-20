@@ -12,8 +12,8 @@ class IntentionParser:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
 
-        # Usamos a versão v1 estável da API via REST
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+        # Mudamos para gemini-pro que é o modelo universal e mais compatível
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={self.api_key}"
 
     def parse(self, text: str):
         """
