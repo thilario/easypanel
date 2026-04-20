@@ -67,7 +67,6 @@ class IntentionParser:
             text_response = completion.choices[0].message.content
             print(f"GROQ RAW RESPONSE: {text_response}")
 
-            parsed_json = json.loads(text_// la l'indentação correta aqui
             parsed_json = json.loads(text_response)
             print(f"GROQ PARSED JSON: {parsed_json}")
             return parsed_json
