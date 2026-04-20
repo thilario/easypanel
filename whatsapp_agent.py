@@ -140,10 +140,18 @@ def process_request(text: str, remote_jid: str):
         end_date = yesterday.strftime("%Y-%m-%d")
         period_name = "Ontem"
 
-    # 3. Monta o date_range para a API da UTMify (Sempre dia cheio UTC)
+    # 3. Monta o date_range para a API da UTMify (Sincronizado com Brasília UTC-3)
+    # Para pegar o dia exato no Brasil, precisamos deslocar 3 horas no UTC.
+    # Ex: 2026-04-18 00:00 BRT = 2026-04-18 03:00:00 UTC
+    # Ex: 2026-04-18 23:59 BRT = 2026-04-19 02:59:59 UTC
+
+    # Calculamos a data de fim (se for ontem, o fim é no dia seguinte às 03h)
+    end_date_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+    end_date_utc = end_date_dt.strftime("%Y-%m-%d")
+
     date_range = {
-        "from": f"{start_date}T00:00:00.000Z",
-        "to": f"{end_date}T23:59:59.999Z"
+        "from": f"{start_date}T03:00:00.000Z",
+        "to": f"{end_date_utc}T02:59:59.999Z"
     }
 
     # 4. Busca os dados
