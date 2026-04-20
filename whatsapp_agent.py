@@ -226,13 +226,11 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         remote_jid = data.get("key", {}).get("remoteJid")
         is_group = remote_jid.endswith("@g.us") if remote_jid else False
 
-        if is_group:
-            print(f"DEBUG GROUP MESSAGE: {json.dumps(message, indent=2)}")
-
         # Verifica se o bot foi mencionado
         mentioned = False
         if is_group:
-            mentions = message.get("mentionedJid", [])
+            context_info = data.get("contextInfo", {})
+            mentions = context_info.get("mentionedJid", [])
             if mentions:
                 mentioned = True
         else:
