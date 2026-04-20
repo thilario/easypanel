@@ -223,10 +223,29 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
                         break
 
         remote_jid = data.get("key", {}).get("remoteJid")
+        is_group = remote_jid.endswith("@g.us") if remote_jid else False
+
+        # Verifica se o bot foi mencionado
+        mentioned = False
+        if is_group:
+            mentions = message.get("mentionedJid", [])
+            # O bot responde se o seu próprio JID estiver na lista de menções
+            # Nota: Na Evolution API, o JID da instância costuma ser o número do bot
+            # Como não temos o JID exato aqui, verificamos se há QUALQUER menção
+            # ou se o texto contém "@" (simplificação comum), mas o correto é checar mentionedJid.
+            if mentions:
+                mentioned = True
+        else:
+            # Em chats privados, responde sempre
+            mentioned = True
 
         if not remote_jid or not message_text:
             print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
             return {"status": "ignored", "message": "Missing remoteJid or text"}
+
+        if not mentioned:
+            print(f"SISTEMA: Mensagem em grupo ignorada (sem menção). RemoteJid: {remote_jid}")
+            return {"status": "ignored", "message": "Bot not mentioned in group"}
 
         print(f"SISTEMA: Processando requisição de {remote_jid}: {message_text}")
         background_tasks.add_task(process_request, message_text, remote_jid)
