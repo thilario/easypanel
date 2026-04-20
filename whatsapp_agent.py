@@ -49,8 +49,10 @@ def send_whatsapp_message(remote_jid: str, text: str):
         print(f"Erro ao enviar mensagem: {e}")
 
 def process_request(text: str, remote_jid: str):
-    """Lógica inteligente de interpretação e resposta usando Gemini."""
-    # 1. Usa o Gemini para entender o que o usuário quer
+    """Lógica inteligente de interpretação e resposta usando Groq e Python para datas."""
+    from datetime import datetime, timedelta
+
+    # 1. Usa o Groq para entender a intenção
     intention = parser.parse(text)
 
     if not intention:
@@ -59,31 +61,60 @@ def process_request(text: str, remote_jid: str):
         return
 
     platform = intention.get("platform")
-    start_date = intention.get("start_date")
-    end_date = intention.get("end_date")
+    period_type = intention.get("period_type")
 
     if not platform:
         response_text = "Você não especificou a plataforma. Deseja dados do *Google* ou *Meta*?"
         send_whatsapp_message(remote_jid, response_text)
         return
 
-    # 2. Converte as datas do Gemini para o formato que a API da UTMify aceita
-    # O Gemini retorna YYYY-MM-DD, precisamos de ISO UTC.
-    # Ajustamos para garantir que pegamos o dia inteiro (de 00:00:00 até 23:59:59)
+    # 2. CÁLCULO DE DATAS NO PYTHON (100% Preciso)
+    now = datetime.now()
+
+    if period_type == "ontem":
+        yesterday = now - timedelta(days=1)
+        start_date = yesterday.strftime("%Y-%m-%d")
+        end_date = yesterday.strftime("%Y-%m-%d")
+        period_name = "Ontem"
+    elif period_type == "mes_atual":
+        start_date = now.replace(day=1).strftime("%Y-%m-%d")
+        end_date = now.strftime("%Y-%m-%d")
+        period_name = "Mês Atual"
+    elif period_type == "semana_passada":
+        # Segunda-feira da semana passada
+        start_date_dt = now - timedelta(days=now.weekday() + 7)
+        start_date = start_date_dt.strftime("%Y-%m-%d")
+        # Domingo da semana passada
+        end_date_dt = start_date_dt + timedelta(days=6)
+        end_date = end_date_dt.strftime("%Y-%m-%d")
+        period_name = "Semana Passada"
+    elif period_type == "especifico":
+        start_date = intention.get("start_date")
+        end_date = intention.get("end_date")
+        period_name = f"de {start_date} até {end_date}"
+        if not start_date or not end_date:
+            response_text = "Não consegui identificar as datas exatas. Pode repetir, por favor?"
+            send_whatsapp_message(remote_jid, response_text)
+            return
+    else:
+        # Fallback para ontem
+        yesterday = now - timedelta(days=1)
+        start_date = yesterday.strftime("%Y-%m-%d")
+        end_date = yesterday.strftime("%Y-%m-%d")
+        period_name = "Ontem"
+
+    # 3. Monta o date_range para a API da UTMify
     date_range = {
         "from": f"{start_date}T00:00:00.000Z",
         "to": f"{end_date}T23:59:59.999Z"
     }
-    print(f"SISTEMA: Buscando métricas para {platform} no período: {date_range}")
 
-    # 3. Busca os dados
+    # 4. Busca os dados
     results = utmify.fetch_metrics(platform, date_range=date_range)
     summary = utmify.calculate_summary(results)
 
-    # 4. Monta a resposta
-    period_desc = f"de {start_date} até {end_date}"
     response_text = (
-        f"📊 *Relatório {platform.upper()}* ({period_desc})\n\n"
+        f"📊 *Relatório {platform.upper()}* ({period_name})\n\n"
         f"💰 *Gasto:* R$ {summary['spend']:.2f}\n"
         f"✅ *Vendas:* {summary['sales']}\n"
         f"📈 *ROAS:* {summary['roas']:.2f}\n"
