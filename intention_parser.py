@@ -1,6 +1,6 @@
 import os
 import json
-import requests
+from groq import Groq
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -8,16 +8,16 @@ load_dotenv()
 
 class IntentionParser:
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY não encontrada nas variáveis de ambiente.")
 
-        # Mudamos para gemini-pro que é o modelo universal e mais compatível
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={self.api_key}"
+        self.client = Groq(api_key=api_key)
+        self.model_id = "llama-3.3-70b-versatile"
 
     def parse(self, text: str):
         """
-        Analisa a mensagem do usuário e extrai a plataforma e o intervalo de datas.
+        Analisa a mensagem do usuário e extrai a plataforma e o intervalo de datas usando Groq.
         Retorna um dicionário com platform, start_date e end_date.
         """
         now = datetime.now()
@@ -41,7 +41,7 @@ class IntentionParser:
         - Se não mencionar plataforma, deixe como null.
         - Se não conseguir determinar a data, use 'ontem' como padrão.
 
-        Retorne APENAS um JSON no seguinte formato:
+        Retorne APENAS um JSON no seguinte formato, sem marcações de markdown:
         {{
             "platform": "google" | "meta" | null,
             "start_date": "YYYY-MM-DD",
@@ -52,28 +52,27 @@ class IntentionParser:
         Mensagem do usuário: "{text}"
         """
 
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
-        }
-
         try:
-            response = requests.post(self.url, json=payload)
-            response.raise_for_status()
+            completion = self.client.chat.completions.create(
+                model=self.model_id,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                temperature=0.1, # Baixa temperatura para maior precisão no JSON
+                response_format={"type": "json_object"}
+            )
 
-            result = response.json()
-            # Extrai o texto da resposta do Gemini
-            text_response = result['candidates'][0]['content']['parts'][0]['text']
-            print(f"GEMINI RAW RESPONSE: {text_response}")
+            text_response = completion.choices[0].message.content
+            print(f"GROQ RAW RESPONSE: {text_response}")
 
-            # Limpa markdown do JSON
-            clean_text = text_response.replace('```json', '').replace('```', '').strip()
-            parsed_json = json.loads(clean_text)
-            print(f"GEMINI PARSED JSON: {parsed_json}")
+            parsed_json = json.loads(text_response)
+            print(f"GROQ PARSED JSON: {parsed_json}")
             return parsed_json
         except Exception as e:
-            print(f"Erro ao processar intenção com Gemini REST: {e}")
+            print(f"Erro ao processar intenção com Groq: {e}")
             import traceback
             traceback.print_exc()
             return None
