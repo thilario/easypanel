@@ -13,9 +13,10 @@ class IntentionParser:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
 
         genai.configure(api_key=api_key)
-        # Usamos 'gemini-1.5-flash' ou 'gemini-pro' como alternativa caso o primeiro falhe
-        self.model_name = 'gemini-1.5-flash'
-        self.model = genai.GenerativeModel(self.model_name)
+        # Lista de modelos em ordem de preferência
+        self.models_to_try = ['gemini-1.5-flash', 'gemini-pro']
+        self.current_model_name = self.models_to_try[0]
+        self.model = genai.GenerativeModel(self.current_model_name)
 
     def parse(self, text: str):
         """
@@ -54,16 +55,23 @@ class IntentionParser:
         Mensagem do usuário: "{text}"
         """
 
-        try:
-            response = self.model.generate_content(prompt)
-            print(f"GEMINI RAW RESPONSE: {response.text}") # LOG DE DEBUG
-            # Remove possíveis marcações de markdown do JSON (ex: ```json ... ```)
-            clean_text = response.text.replace('```json', '').replace('```', '').strip()
-            parsed_json = json.loads(clean_text)
-            print(f"GEMINI PARSED JSON: {parsed_json}") # LOG DE DEBUG
-            return parsed_json
-        except Exception as e:
-            print(f"Erro ao processar intenção com Gemini: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
+        # Tenta os modelos disponíveis até encontrar um que funcione
+        for model_name in self.models_to_try:
+            try:
+                if self.current_model_name != model_name:
+                    self.current_model_name = model_name
+                    self.model = genai.GenerativeModel(model_name)
+
+                response = self.model.generate_content(prompt)
+                print(f"GEMINI RAW RESPONSE ({model_name}): {response.text}")
+
+                clean_text = response.text.replace('```json', '').replace('```', '').strip()
+                parsed_json = json.loads(clean_text)
+                print(f"GEMINI PARSED JSON: {parsed_json}")
+                return parsed_json
+            except Exception as e:
+                print(f"Erro ao tentar modelo {model_name}: {e}")
+                continue
+
+        print("Falha total ao processar intenção com todos os modelos do Gemini.")
+        return None
