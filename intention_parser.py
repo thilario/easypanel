@@ -17,8 +17,8 @@ class IntentionParser:
 
     def parse(self, text: str):
         """
-        Analisa a mensagem do usuário e extrai a intenção de data e plataforma.
-        Retorna um dicionário com platform e period_type.
+        Analisa a mensagem do usuário e extrai a intenção, métrica e plataforma.
+        Retorna um dicionário com platform, period_type, e a métrica de interesse.
         """
         now = datetime.now()
         current_date = now.strftime("%Y-%m-%d")
@@ -35,12 +35,20 @@ class IntentionParser:
            - 'semana_passada' (se pedir semana passada)
            - 'especifico' (se mencionar datas exatas como 'dia 10', 'de 01 a 05')
 
+        3. Objetivo da Análise:
+           - 'geral' (resumo de todas as métricas)
+           - 'gasto' (foco em custo/spend)
+           - 'vendas' (foco em conversões/sales)
+           - 'performance' (foco em ROAS, CAC e eficiência)
+           - 'insights' (análise crítica e sugestões)
+
         Se for 'especifico', extraia as datas no formato YYYY-MM-DD.
 
         Retorne APENAS um JSON no seguinte formato:
         {{
             "platform": "google" | "meta" | null,
             "period_type": "ontem" | "mes_atual" | "semana_passada" | "especifico",
+            "objective": "geral" | "gasto" | "vendas" | "performance" | "insights",
             "start_date": "YYYY-MM-DD" | null,
             "end_date": "YYYY-MM-DD" | null
         }}
@@ -59,6 +67,7 @@ class IntentionParser:
             text_response = completion.choices[0].message.content
             print(f"GROQ RAW RESPONSE: {text_response}")
 
+            parsed_json = json.loads(text_// la l'indentação correta aqui
             parsed_json = json.loads(text_response)
             print(f"GROQ PARSED JSON: {parsed_json}")
             return parsed_json
