@@ -48,6 +48,47 @@ def send_whatsapp_message(remote_jid: str, text: str):
     except Exception as e:
         print(f"Erro ao enviar mensagem: {e}")
 
+def synthesize_response(text: str, platform: str, period_name: str, summary: dict):
+    """Usa a IA para transformar dados brutos em uma resposta analítica e natural."""
+    from intention_parser import IntentionParser
+    # Criamos um parser temporário apenas para usar o cliente Groq
+    parser = IntentionParser()
+
+    prompt = f"""
+    Você é um Analista de Performance de Marketing sênior.
+    Sua tarefa é transformar dados brutos da UTMify em uma resposta natural e profissional para o WhatsApp.
+
+    Pergunta do usuário: "{text}"
+    Plataforma: {platform.upper()}
+    Período: {period_name}
+    Dados Brutos:
+    - Gasto Total: R$ {summary['spend']:.2f}
+    - Vendas Totais: {summary['sales']}
+    - ROAS: {summary['roas']:.2f}
+    - CAC: R$ {summary['cac']:.2f}
+    - Receita: R$ {summary['revenue']:.2f}
+
+    Instruções de Redação:
+    1. Seja direto, mas profissional. Use emojis moderadamente.
+    2. Se o usuário pediu 'insights', analise se o ROAS está bom ou se o CAC está alto.
+    3. Se o gasto for 0, informe que não houve investimento no período.
+    4. Não use termos técnicos excessivos, foque no resultado financeiro.
+    5. Formate a resposta com negritos para destacar os números.
+
+    Exemplo de tom: "Olá! No Google, ontem tivemos um gasto de R$ 10,00 com 2 vendas, resultando em um ROAS de 5.0. O CAC está bem saudável!"
+    """
+
+    try:
+        completion = parser.client.chat.completions.create(
+            model=parser.model_id,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+        )
+        return completion.choices[0].message.content
+    except Exception as e:
+        print(f"Erro ao sintetizar resposta: {e}")
+        return f"📊 *Relatório {platform.upper()}* ({period_name})\n\n💰 *Gasto:* R$ {summary['spend']:.2f}\n✅ *Vendas:* {summary['sales']}\n📈 *ROAS:* {summary['roas']:.2f}\n🎯 *CAC:* R$ {summary['cac']:.2f}"
+
 def process_request(text: str, remote_jid: str):
     """Lógica inteligente de interpretação e resposta usando Groq e Python para datas."""
     from datetime import datetime, timedelta
@@ -81,10 +122,8 @@ def process_request(text: str, remote_jid: str):
         end_date = now.strftime("%Y-%m-%d")
         period_name = "Mês Atual"
     elif period_type == "semana_passada":
-        # Segunda-feira da semana passada
         start_date_dt = now - timedelta(days=now.weekday() + 7)
         start_date = start_date_dt.strftime("%Y-%m-%d")
-        # Domingo da semana passada
         end_date_dt = start_date_dt + timedelta(days=6)
         end_date = end_date_dt.strftime("%Y-%m-%d")
         period_name = "Semana Passada"
@@ -97,7 +136,6 @@ def process_request(text: str, remote_jid: str):
             send_whatsapp_message(remote_jid, response_text)
             return
     else:
-        # Fallback para ontem
         yesterday = now - timedelta(days=1)
         start_date = yesterday.strftime("%Y-%m-%d")
         end_date = yesterday.strftime("%Y-%m-%d")
@@ -113,13 +151,8 @@ def process_request(text: str, remote_jid: str):
     results = utmify.fetch_metrics(platform, date_range=date_range)
     summary = utmify.calculate_summary(results)
 
-    response_text = (
-        f"📊 *Relatório {platform.upper()}* ({period_name})\n\n"
-        f"💰 *Gasto:* R$ {summary['spend']:.2f}\n"
-        f"✅ *Vendas:* {summary['sales']}\n"
-        f"📈 *ROAS:* {summary['roas']:.2f}\n"
-        f"🎯 *CAC:* R$ {summary['cac']:.2f}"
-    )
+    # 5. GERA RESPOSTA DINÂMICA COM IA
+    response_text = synthesize_response(text, platform, period_name, summary)
 
     send_whatsapp_message(remote_jid, response_text)
 
