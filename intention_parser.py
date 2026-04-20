@@ -1,6 +1,6 @@
 import os
 import json
-from google import genai
+import requests
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -8,14 +8,12 @@ load_dotenv()
 
 class IntentionParser:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
             raise ValueError("GEMINI_API_KEY não encontrada nas variáveis de ambiente.")
 
-        # Nova biblioteca google-genai
-        self.client = genai.Client(api_key=api_key)
-        # Mudamos para 'gemini-1.0-pro' que é o modelo mais estável e compatível
-        self.model_id = 'gemini-1.0-pro'
+        # Usamos a versão v1 estável da API via REST
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
 
     def parse(self, text: str):
         """
@@ -54,22 +52,28 @@ class IntentionParser:
         Mensagem do usuário: "{text}"
         """
 
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
+        }
+
         try:
-            # Nova sintaxe da biblioteca google-genai
-            response = self.client.models.generate_content(
-                model=self.model_id,
-                contents=prompt
-            )
+            response = requests.post(self.url, json=payload)
+            response.raise_for_status()
 
-            print(f"GEMINI RAW RESPONSE: {response.text}")
+            result = response.json()
+            # Extrai o texto da resposta do Gemini
+            text_response = result['candidates'][0]['content']['parts'][0]['text']
+            print(f"GEMINI RAW RESPONSE: {text_response}")
 
-            # Remove possíveis marcações de markdown do JSON (ex: ```json ... ```)
-            clean_text = response.text.replace('```json', '').replace('```', '').strip()
+            # Limpa markdown do JSON
+            clean_text = text_response.replace('```json', '').replace('```', '').strip()
             parsed_json = json.loads(clean_text)
             print(f"GEMINI PARSED JSON: {parsed_json}")
             return parsed_json
         except Exception as e:
-            print(f"Erro ao processar intenção com Gemini: {e}")
+            print(f"Erro ao processar intenção com Gemini REST: {e}")
             import traceback
             traceback.print_exc()
             return None
