@@ -1,16 +1,14 @@
 print("SISTEMA INICIANDO... Verificando config...")
 import os
 import sys
-print(f"Caminho atual (CWD): {os.getcwd()}")
-print(f"Caminhos de busca do Python (sys.path): {sys.path}")
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import requests
 from utmify_client import UTMifyClient
 from dotenv import load_dotenv
 from intention_parser import IntentionParser
-
-load_dotenv()
+import pytz
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -21,9 +19,8 @@ EVOLUTION_URL = "https://evolutionapi-evolution-api.eaxyla.easypanel.host"
 EVOLUTION_API_KEY = "8DE0548DAD46-45B4-8CFC-13D2359243E4"
 INSTANCE_NAME = "robo"
 
-# Cliente UTMify
+# Cliente UTMify e Parser
 utmify = UTMifyClient()
-# Analisador de Intenções (Gemini)
 parser = IntentionParser()
 
 class EvolutionWebhook(BaseModel):
@@ -50,10 +47,7 @@ def send_whatsapp_message(remote_jid: str, text: str):
 
 def synthesize_response(text: str, platform: str, period_name: str, summary: dict):
     """Usa a IA para transformar dados brutos em uma resposta analítica e natural."""
-    from intention_parser import IntentionParser
-    # Criamos um parser temporário apenas para usar o cliente Groq
-    parser = IntentionParser()
-
+    # Usamos o client do parser já instanciado para evitar criar novos clientes
     prompt = f"""
     Você é um Analista de Performance de Marketing sênior.
     Sua tarefa é transformar dados brutos da UTMify em uma resposta natural e profissional para o WhatsApp.
@@ -91,7 +85,6 @@ def synthesize_response(text: str, platform: str, period_name: str, summary: dic
 
 def process_request(text: str, remote_jid: str):
     """Lógica inteligente de interpretação e resposta usando Groq e Python para datas."""
-    from datetime import datetime, timedelta
 
     # 1. Usa o Groq para entender a intenção
     intention = parser.parse(text)
@@ -109,10 +102,16 @@ def process_request(text: str, remote_jid: str):
         send_whatsapp_message(remote_jid, response_text)
         return
 
-    # 2. CÁLCULO DE DATAS NO PYTHON (100% Preciso)
-    now = datetime.now()
+    # 2. CÁLCULO DE DATAS NO PYTHON (Sincronizado com São Paulo)
+    tz = pytz.timezone('America/Sao_Paulo')
+    now = datetime.now(tz)
+    print(f"SISTEMA: Data Atual (SP): {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    if period_type == "ontem":
+    if period_type == "hoje":
+        start_date = now.strftime("%Y-%m-%d")
+        end_date = now.strftime("%Y-%m-%d")
+        period_name = "Hoje"
+    elif period_type == "ontem":
         yesterday = now - timedelta(days=1)
         start_date = yesterday.strftime("%Y-%m-%d")
         end_date = yesterday.strftime("%Y-%m-%d")
@@ -141,7 +140,7 @@ def process_request(text: str, remote_jid: str):
         end_date = yesterday.strftime("%Y-%m-%d")
         period_name = "Ontem"
 
-    # 3. Monta o date_range para a API da UTMify
+    # 3. Monta o date_range para a API da UTMify (Sempre dia cheio UTC)
     date_range = {
         "from": f"{start_date}T00:00:00.000Z",
         "to": f"{end_date}T23:59:59.999Z"
@@ -158,20 +157,17 @@ def process_request(text: str, remote_jid: str):
 
 @app.get("/test")
 async def test():
-    """Rota simples para verificar se o servidor está online."""
     return {"status": "Alive!", "message": "O servidor do agente está funcionando perfeitamente."}
 
 @app.post("/webhook")
 async def webhook(request: Request, background_tasks: BackgroundTasks):
-    """Recebe eventos da Evolution API com tratamento robusto de erros."""
     try:
         body = await request.json()
-        print(f"WEBHOOK RECEIVED: {body}") # LOG DE DEBUG
+        print(f"WEBHOOK RECEIVED: {body}")
     except Exception as e:
         print(f"Erro ao processar JSON do webhook: {e}")
         return {"status": "error", "message": "Invalid JSON"}
 
-    # A Evolution API pode enviar o evento na raiz ou dentro de um objeto
     event = body.get("event") if isinstance(body, dict) else None
 
     if event == "messages.upsert":
@@ -183,19 +179,14 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         if not message:
             return {"status": "ignored", "message": "No message found in data"}
 
-        # Tenta extrair o texto de todas as formas possíveis (Evolution API v1 e v2)
         message_text = ""
         if isinstance(message, dict):
-            # Tenta conversation (mensagens simples)
             if "conversation" in message:
                 message_text = message["conversation"]
-            # Tenta extendedTextMessage (mensagens com link, formatação ou menção)
             elif "extendedTextMessage" in message:
                 message_text = message["extendedTextMessage"].get("text", "")
-            # Tenta apenas o campo text
             elif "text" in message:
                 message_text = message["text"]
-            # Fallback: tenta procurar qualquer chave que contenha texto
             else:
                 for key, value in message.items():
                     if key in ["text", "content", "body"] and isinstance(value, str):
@@ -208,8 +199,6 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
             print(f"DEBUG: Mensagem ignorada. RemoteJid: {remote_jid}, Texto: {message_text}")
             return {"status": "ignored", "message": "Missing remoteJid or text"}
 
-        # Lógica de Menção: DESATIVADA para testes
-        # Respondemos a qualquer mensagem para validar o fluxo
         print(f"SISTEMA: Processando requisição de {remote_jid}: {message_text}")
         background_tasks.add_task(process_request, message_text, remote_jid)
 
