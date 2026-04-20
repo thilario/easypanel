@@ -106,11 +106,15 @@ class UTMifyClient:
         total_spend = 0
         total_sales = 0
         total_revenue = 0
+        total_clicks = 0
+        total_impressions = 0
 
         for item in results:
             total_spend += item.get('spend', 0)
             total_sales += item.get('approvedOrdersCount', 0)
             total_revenue += item.get('revenue', 0)
+            total_clicks += item.get('inlineLinkClicks', 0)
+            total_impressions += item.get('impressions', 0)
 
         # Conversão de centavos para Real
         spend_brl = total_spend / 100
@@ -119,12 +123,24 @@ class UTMifyClient:
         roas = revenue_brl / spend_brl if spend_brl > 0 else 0
         cac = spend_brl / total_sales if total_sales > 0 else 0
 
+        # Métricas Secundárias
+        cpc = spend_brl / total_clicks if total_clicks > 0 else 0
+        ctr = (total_clicks / total_impressions) * 100 if total_impressions > 0 else 0
+        cpm = (spend_brl / total_impressions) * 1000 if total_impressions > 0 else 0
+        conv_rate = (total_sales / total_clicks) * 100 if total_clicks > 0 else 0
+
         return {
             "spend": spend_brl,
             "sales": total_sales,
             "revenue": revenue_brl,
             "roas": roas,
-            "cac": cac
+            "cac": cac,
+            "clicks": total_clicks,
+            "impressions": total_impressions,
+            "cpc": cpc,
+            "ctr": ctr,
+            "cpm": cpm,
+            "conv_rate": conv_rate
         }
 
 if __name__ == "__main__":
