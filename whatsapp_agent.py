@@ -148,6 +148,12 @@ def process_request(text: str, remote_jid: str):
 
     # 4. Busca os dados
     results = utmify.fetch_metrics(platform, date_range=date_range)
+
+    # LOG DE INVESTIGAÇÃO: Imprime cada item retornado pela API para detectar duplicatas
+    print(f"SISTEMA: Recebido {len(results)} itens da UTMify para {platform}")
+    for i, item in enumerate(results):
+        print(f"Item {i}: Nome: {item.get('name', 'N/A')} | Gasto: {item.get('spend', 0)} | Vendas: {item.get('approvedOrdersCount', 0)}")
+
     summary = utmify.calculate_summary(results)
 
     # 5. GERA RESPOSTA DINÂMICA COM IA
