@@ -52,9 +52,9 @@ def synthesize_response(text: str, platform: str, period_name: str, summary: dic
     data_context = ""
     if platform == "all":
         for p, s in summary.items():
-            data_context += f"\nPlataforma {p.upper()}:\n- Gasto Total: R$ {s['spend']:.2f}\n- Vendas Totais: {s['sales']}\n- ROAS: {s['roas']:.2f}\n- CAC: R$ {s['cac']:.2f}\n- Receita: R$ {s['revenue']:.2f}\n"
+            data_context += f"\nPlataforma {p.upper()}:\n- Gasto: R$ {s['spend']:.2f} | Vendas: {s['sales']} | Receita: R$ {s['revenue']:.2f}\n- ROAS: {s['roas']:.2f} | CAC: R$ {s['cac']:.2f}\n- Cliques: {s['clicks']} | Impressões: {s['impressions']}\n- CPC: R$ {s['cpc']:.2f} | CTR: {s['ctr']:.2f}% | CPM: R$ {s['cpm']:.2f} | Conv: {s['conv_rate']:.2f}%\n"
     else:
-        data_context = f"- Gasto Total: R$ {summary['spend']:.2f}\n- Vendas Totais: {summary['sales']}\n- ROAS: {summary['roas']:.2f}\n- CAC: R$ {summary['cac']:.2f}\n- Receita: R$ {summary['revenue']:.2f}"
+        data_context = f"- Gasto: R$ {summary['spend']:.2f} | Vendas: {summary['sales']} | Receita: R$ {summary['revenue']:.2f}\n- ROAS: {summary['roas']:.2f} | CAC: R$ {summary['cac']:.2f}\n- Cliques: {summary['clicks']} | Impressões: {summary['impressions']}\n- CPC: R$ {summary['cpc']:.2f} | CTR: {summary['ctr']:.2f}% | CPM: R$ {summary['cpm']:.2f} | Conv: {summary['conv_rate']:.2f}%"
 
     prompt = f"""
     Você é um Analista de Performance de Marketing sênior.
