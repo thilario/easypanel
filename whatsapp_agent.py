@@ -1,6 +1,7 @@
 print("SISTEMA INICIANDO... Verificando config...")
 import os
 import sys
+import json
 from fastapi import FastAPI, Request, BackgroundTasks
 from pydantic import BaseModel
 import requests
@@ -225,18 +226,16 @@ async def webhook(request: Request, background_tasks: BackgroundTasks):
         remote_jid = data.get("key", {}).get("remoteJid")
         is_group = remote_jid.endswith("@g.us") if remote_jid else False
 
+        if is_group:
+            print(f"DEBUG GROUP MESSAGE: {json.dumps(message, indent=2)}")
+
         # Verifica se o bot foi mencionado
         mentioned = False
         if is_group:
             mentions = message.get("mentionedJid", [])
-            # O bot responde se o seu próprio JID estiver na lista de menções
-            # Nota: Na Evolution API, o JID da instância costuma ser o número do bot
-            # Como não temos o JID exato aqui, verificamos se há QUALQUER menção
-            # ou se o texto contém "@" (simplificação comum), mas o correto é checar mentionedJid.
             if mentions:
                 mentioned = True
         else:
-            # Em chats privados, responde sempre
             mentioned = True
 
         if not remote_jid or not message_text:
