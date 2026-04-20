@@ -47,7 +47,14 @@ def send_whatsapp_message(remote_jid: str, text: str):
 
 def synthesize_response(text: str, platform: str, period_name: str, summary: dict):
     """Usa a IA para transformar dados brutos em uma resposta analítica e natural."""
-    # Usamos o client do parser já instanciado para evitar criar novos clientes
+    # Se for 'all', passamos o sumário como um dicionário de plataformas
+    data_context = ""
+    if platform == "all":
+        for p, s in summary.items():
+            data_context += f"\nPlataforma {p.upper()}:\n- Gasto Total: R$ {s['spend']:.2f}\n- Vendas Totais: {s['sales']}\n- ROAS: {s['roas']:.2f}\n- CAC: R$ {s['cac']:.2f}\n- Receita: R$ {s['revenue']:.2f}\n"
+    else:
+        data_context = f"- Gasto Total: R$ {summary['spend']:.2f}\n- Vendas Totais: {summary['sales']}\n- ROAS: {summary['roas']:.2f}\n- CAC: R$ {summary['cac']:.2f}\n- Receita: R$ {summary['revenue']:.2f}"
+
     prompt = f"""
     Você é um Analista de Performance de Marketing sênior.
     Sua tarefa é transformar dados brutos da UTMify em uma resposta natural e profissional para o WhatsApp.
@@ -56,11 +63,7 @@ def synthesize_response(text: str, platform: str, period_name: str, summary: dic
     Plataforma: {platform.upper()}
     Período: {period_name}
     Dados Brutos:
-    - Gasto Total: R$ {summary['spend']:.2f}
-    - Vendas Totais: {summary['sales']}
-    - ROAS: {summary['roas']:.2f}
-    - CAC: R$ {summary['cac']:.2f}
-    - Receita: R$ {summary['revenue']:.2f}
+    {data_context}
 
     Instruções de Redação:
     1. Seja direto, mas profissional. Use emojis moderadamente.
@@ -68,6 +71,7 @@ def synthesize_response(text: str, platform: str, period_name: str, summary: dic
     3. Se o gasto for 0, informe que não houve investimento no período.
     4. Não use termos técnicos excessivos, foque no resultado financeiro.
     5. Formate a resposta com negritos para destacar os números.
+    6. Se for 'ALL', compare brevemente as duas plataformas.
 
     Exemplo de tom: "Olá! No Google, ontem tivemos um gasto de R$ 10,00 com 2 vendas, resultando em um ROAS de 5.0. O CAC está bem saudável!"
     """
@@ -81,7 +85,7 @@ def synthesize_response(text: str, platform: str, period_name: str, summary: dic
         return completion.choices[0].message.content
     except Exception as e:
         print(f"Erro ao sintetizar resposta: {e}")
-        return f"📊 *Relatório {platform.upper()}* ({period_name})\n\n💰 *Gasto:* R$ {summary['spend']:.2f}\n✅ *Vendas:* {summary['sales']}\n📈 *ROAS:* {summary['roas']:.2f}\n🎯 *CAC:* R$ {summary['cac']:.2f}"
+        return f"📊 *Relatório {platform.upper()}* ({period_name})\n\nConsulte os dados no dashboard."
 
 def process_request(text: str, remote_jid: str):
     """Lógica inteligente de interpretação e resposta usando Groq e Python para datas."""
@@ -156,16 +160,23 @@ def process_request(text: str, remote_jid: str):
 
     # 4. Busca os dados
     print(f"SISTEMA: Chamando API UTMify para {platform} | Período: {date_range}")
-    results = utmify.fetch_metrics(platform, date_range=date_range)
 
-    print(f"SISTEMA: API UTMify retornou {len(results)} itens")
-    if len(results) > 0:
-        for i, item in enumerate(results):
-            print(f"ITEM {i} -> Nome: {item.get('name')} | Gasto: {item.get('spend')} | Vendas: {item.get('approvedOrdersCount')}")
+    if platform == "all":
+        all_summaries = {}
+        for p in ["google", "meta"]:
+            res = utmify.fetch_metrics(p, date_range=date_range)
+            all_summaries[p] = utmify.calculate_summary(res)
+        summary = all_summaries
     else:
-        print("SISTEMA: A API da UTMify retornou uma lista VAZIA. Verifique se há dados para este período.")
+        results = utmify.fetch_metrics(platform, date_range=date_range)
+        print(f"SISTEMA: API UTMify retornou {len(results)} itens")
+        if len(results) > 0:
+            for i, item in enumerate(results):
+                print(f"ITEM {i} -> Nome: {item.get('name')} | Gasto: {item.get('spend')} | Vendas: {item.get('approvedOrdersCount')}")
+        else:
+            print("SISTEMA: A API da UTMify retornou uma lista VAZIA. Verifique se há dados para este período.")
+        summary = utmify.calculate_summary(results)
 
-    summary = utmify.calculate_summary(results)
     print(f"SISTEMA: Sumário Calculado: {summary}")
 
     # 5. GERA RESPOSTA DINÂMICA COM IA
