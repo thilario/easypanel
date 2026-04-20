@@ -30,7 +30,7 @@ class IntentionParser:
         Data atual (SÃO PAULO): {current_date}
 
         Analise a mensagem do usuário e identifique:
-        1. Plataforma: 'google' ou 'meta'.
+        1. Plataforma: 'google', 'meta' ou 'all' (se pedir as duas, ambas, geral, resumo completo, todas, etc).
         2. Tipo de Período:
            - 'ontem' (se pedir ontem, dia anterior, etc)
            - 'hoje' (se pedir hoje, agora, data atual)
@@ -42,7 +42,7 @@ class IntentionParser:
 
         Retorne APENAS um JSON no seguinte formato:
         {{
-            "platform": "google" | "meta" | null,
+            "platform": "google" | "meta" | "all" | null,
             "period_type": "ontem" | "hoje" | "mes_atual" | "semana_passada" | "especifico",
             "start_date": "YYYY-MM-DD" | null,
             "end_date": "YYYY-MM-DD" | null
