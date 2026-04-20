@@ -14,7 +14,8 @@ class IntentionParser:
 
         # Nova biblioteca google-genai
         self.client = genai.Client(api_key=api_key)
-        self.model_id = 'gemini-1.5-flash'
+        # Mudamos para 'gemini-1.0-pro' que é o modelo mais estável e compatível
+        self.model_id = 'gemini-1.0-pro'
 
     def parse(self, text: str):
         """
